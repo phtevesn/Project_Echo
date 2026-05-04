@@ -30,6 +30,8 @@ and instantly receive a predicted income estimate from the saved pipeline
 |------|-------------|
 | `app.py` | Main Python tkinter GUI application |
 | `income_pipeline.pkl` | Pre-trained ensemble model (**must be present**) |
+| `requirements.txt` | All required Python packages |
+| `.gitignore` | Excludes `.venv/`, `dist/`, build artifacts from git |
 | `README.md` | This file |
 
 ---
@@ -37,6 +39,12 @@ and instantly receive a predicted income estimate from the saved pipeline
 ## Requirements
 
 Install all dependencies with one command:
+
+```
+pip install -r requirements.txt
+```
+
+Or individually:
 
 ```
 pip install scikit-learn joblib pandas numpy xgboost lightgbm catboost fairlearn
@@ -61,12 +69,9 @@ pip install scikit-learn joblib pandas numpy xgboost lightgbm catboost fairlearn
 
 ### Prerequisites
 
-- **Python 3.9 or later** → <https://www.python.org/downloads/>
+- **Python 3.9.x – 3.11.x** → <https://www.python.org/downloads/release/python-3119/>
+  _(Python 3.12+ is **not** supported — `scipy` has no pre-built wheel for newer versions and will fail to install. **3.11.9** is the recommended version and the last with a Windows installer)_
   _(tick "Add Python to PATH" during installation on Windows)_
-- Install required packages (see [Requirements](#requirements) above):
-  ```
-  pip install scikit-learn joblib pandas numpy xgboost lightgbm catboost fairlearn
-  ```
 
 ### Steps
 
@@ -74,11 +79,21 @@ pip install scikit-learn joblib pandas numpy xgboost lightgbm catboost fairlearn
 2. Open a terminal / Command Prompt in that folder:
    - **Windows:** Shift + right-click the folder → _"Open PowerShell window here"_
      or press `Win+R`, type `cmd`, then `cd "path\to\folder"`
-3. Run:
+3. Create and activate a virtual environment:
+   ```powershell
+   python -m venv .venv
+   .venv\Scripts\Activate.ps1
+   ```
+   > On Mac/Linux: `source .venv/bin/activate`
+4. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+5. Run:
    ```
    python app.py
    ```
-4. The Project Echo window opens. Fill in the form and click **Predict Estimated Income**.
+6. The Project Echo window opens. Fill in the form and click **Predict Estimated Income**.
 
 ---
 
@@ -88,8 +103,9 @@ pip install scikit-learn joblib pandas numpy xgboost lightgbm catboost fairlearn
 
 ### Prerequisites _(build machine only)_
 
-- Python 3.9+ with the packages from Option A
-- PyInstaller:
+- **Python 3.9.x – 3.11.x** (Python 3.12+ does **not** work; **3.11.x recommended**)
+- All packages from Option A installed in that environment
+- PyInstaller is included in `requirements.txt`, or install manually:
   ```
   pip install pyinstaller
   ```
@@ -99,13 +115,25 @@ pip install scikit-learn joblib pandas numpy xgboost lightgbm catboost fairlearn
 Run once from the project folder (same directory as `app.py`):
 
 ```bat
-pyinstaller --onefile --windowed ^
+pyinstaller --clean --onefile --windowed ^
+  --hidden-import=xgboost ^
+  --collect-all xgboost ^
+  --hidden-import=lightgbm ^
+  --collect-all lightgbm ^
+  --hidden-import=catboost ^
+  --collect-all catboost ^
+  --hidden-import=sklearn ^
+  --hidden-import=joblib ^
   --add-data "income_pipeline.pkl;." ^
   --name "ProjectEcho" ^
   app.py
 ```
 
-_On Mac/Linux replace the semicolon with a colon: `--add-data "income_pipeline.pkl:."`_
+> The `--hidden-import` and `--collect-all` flags are required because PyInstaller does not
+> auto-detect XGBoost, LightGBM, and CatBoost at bundle time. Omitting them produces an
+> import error when the `.exe` is launched.
+
+_On Mac/Linux replace `^` with `` ` `` (PowerShell) or `\` (bash), and replace the semicolon in `--add-data` with a colon: `"income_pipeline.pkl:".`_
 
 ### Output
 
@@ -116,31 +144,17 @@ Copy **only** `ProjectEcho.exe` to any Windows PC – double-click to launch.
 
 ## Option C – Run Over the Web (WWW / Hosted Server)
 
-The tkinter GUI is a desktop application. To expose it over the web:
+The tkinter GUI is a desktop application. To expose it over the web a separate web app would need to be built (e.g. using Streamlit or Flask) that reuses the `income_pipeline.pkl` model. This is not included in the current project.
 
-### Path 1 – Streamlit Web App _(recommended)_
-
+**Possible approach using Streamlit:**
 ```
 pip install streamlit
+```
+Create a `web_app.py` that loads `income_pipeline.pkl` via `joblib` and builds a Streamlit form, then run:
+```
 streamlit run web_app.py
 ```
-
-Then open <http://localhost:8501> in any browser.
-
-**Free public deployment:**
-- Push the project to GitHub.
-- Go to <https://share.streamlit.io> and connect your repo.
-- Streamlit Community Cloud hosts the app publicly at a shareable URL.
-
-### Path 2 – Flask / FastAPI REST Backend
-
-```
-pip install flask
-```
-
-Create a small API endpoint that accepts JSON inputs, calls `pipeline.predict()`,
-and returns the result. Host on any cloud provider (Render, Railway, Heroku, etc.)
-and pair with any HTML / React front-end.
+For free public hosting, push to GitHub and deploy via <https://share.streamlit.io>.
 
 ---
 
@@ -173,6 +187,7 @@ applying `exp()` to convert back to dollar scale.
 | `ModuleNotFoundError: joblib` | Run `pip install joblib` |
 | `ModuleNotFoundError: xgboost / lightgbm / catboost` | Run `pip install xgboost lightgbm catboost` |
 | `No module named 'tkinter'` | Reinstall Python from python.org and tick "tcl/tk and IDLE", or on Linux: `sudo apt-get install python3-tk` |
+| `.exe` crashes on launch / import error | Rebuild with the full `--hidden-import` / `--collect-all` command shown above. Make sure you used **Python 3.11.x** to build. |
 | Prediction seems off | Ensure the `.pkl` was generated by `final_income_model.ipynb` using `fairlearn.datasets.fetch_acs_income` (ACS PUMS dataset). |
 
 ---
